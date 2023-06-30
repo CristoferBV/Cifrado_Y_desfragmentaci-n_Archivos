@@ -30,7 +30,7 @@ public class ServidorSecundario1 {
                 System.out.println("Fragmento guardado en: " + FRAGMENT_FILE_PATH);
 
                 socket.close();
-                serverSocket.close();
+                //serverSocket.close();
                 
             }
         } catch (IOException e) {

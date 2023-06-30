@@ -4,6 +4,8 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 
 public class ServidorPrincipal {
     private static final int SERVER_PORT = 8000;
@@ -11,6 +13,10 @@ public class ServidorPrincipal {
     private static final int SERVER_SECUNDARIO2_PORT = 8300; // Puerto para la conexión con el servidor secundario 2
     private static final int SERVER_SECUNDARIO3_PORT = 8400; // Puerto para la conexión con el servidor secundario 3
     private static final int FRAGMENT_SIZE = 1024;
+
+    // Configuración de cifrado
+    private static final String ENCRYPTION_ALGORITHM = "AES";
+    private static final String ENCRYPTION_KEY = "MiClaveSecreta123456@01K"; // Reemplaza con tu propia clave de cifrado
 
     public static void main(String[] args) {
         try {
@@ -29,8 +35,12 @@ public class ServidorPrincipal {
 
             System.out.println("Tamaño del archivo cifrado: " + encryptedFile.length + " bytes");
 
+            // Descifrar archivo
+            byte[] decryptedFile = decryptFile(encryptedFile);
+            System.out.println("Tamaño del archivo descifrado: " + decryptedFile.length + " bytes");
+
             // Desfragmentar archivo en fragmentos
-            byte[][] fileFragments = defragmentFile(encryptedFile);
+            byte[][] fileFragments = defragmentFile(decryptedFile);
             System.out.println("Número de fragmentos: " + fileFragments.length);
 
             // Enviar fragmentos a los servidores secundarios
@@ -59,7 +69,6 @@ public class ServidorPrincipal {
             } else {
                 System.out.println("Pasó un error");
             }
-            System.out.println("Los fragmentos han sido unidos en el archivo FragmentosUnidos.txt");
 
             clientSocket.close();
 
@@ -68,16 +77,16 @@ public class ServidorPrincipal {
         }
     }
 
-    private static byte[][] defragmentFile(byte[] encryptedFile) {
+    private static byte[][] defragmentFile(byte[] decryptedFile) {
         int numFragments = 3; // Número de fragmentos deseado (en este caso, 3)
         byte[][] fileFragments = new byte[numFragments][];
-        int fragmentSize = (int) Math.ceil((double) encryptedFile.length / numFragments);
+        int fragmentSize = (int) Math.ceil((double) decryptedFile.length / numFragments);
         int offset = 0;
 
         for (int i = 0; i < numFragments; i++) {
-            int fragmentLength = Math.min(fragmentSize, encryptedFile.length - offset);
+            int fragmentLength = Math.min(fragmentSize, decryptedFile.length - offset);
             fileFragments[i] = new byte[fragmentLength];
-            System.arraycopy(encryptedFile, offset, fileFragments[i], 0, fragmentLength);
+            System.arraycopy(decryptedFile, offset, fileFragments[i], 0, fragmentLength);
             offset += fragmentLength;
         }
 
@@ -113,6 +122,18 @@ public class ServidorPrincipal {
         }
 
         return mergedFile;
+    }
+
+    private static byte[] decryptFile(byte[] encryptedBytes) throws IOException {
+        try {
+            SecretKeySpec secretKey = new SecretKeySpec(ENCRYPTION_KEY.getBytes(), ENCRYPTION_ALGORITHM);
+            Cipher cipher = Cipher.getInstance(ENCRYPTION_ALGORITHM);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey);
+            return cipher.doFinal(encryptedBytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private static void sendFileToClient(byte[] fileBytes, DataOutputStream dataOutputStream) throws IOException {
