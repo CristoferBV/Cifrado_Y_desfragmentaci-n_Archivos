@@ -2,11 +2,8 @@ package Funcionamiento;
 
 import java.io.*;
 import java.net.*;
-import javax.crypto.*;
-import javax.crypto.spec.*;
-import java.util.Base64;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ServidorPrincipal {
     private static final int SERVER_PORT = 8000;
@@ -37,9 +34,9 @@ public class ServidorPrincipal {
             System.out.println("Número de fragmentos: " + fileFragments.length);
 
             // Enviar fragmentos a los servidores secundarios
-            sendFragmentToServer(fileFragments[0], "192.168.0.5", SERVER_SECUNDARIO1_PORT);
-            sendFragmentToServer(fileFragments[1], "192.168.0.5", SERVER_SECUNDARIO2_PORT);
-            sendFragmentToServer(fileFragments[2], "192.168.0.5", SERVER_SECUNDARIO3_PORT);
+            sendFragmentToServer(fileFragments[0], "192.168.0.4", SERVER_SECUNDARIO1_PORT);
+            sendFragmentToServer(fileFragments[1], "192.168.0.4", SERVER_SECUNDARIO2_PORT);
+            sendFragmentToServer(fileFragments[2], "192.168.0.4", SERVER_SECUNDARIO3_PORT);
 
             // Nuevo flujo de salida y entrada para comunicación adicional con el cliente
             OutputStream additionalOutputStream = clientSocket.getOutputStream();
@@ -51,13 +48,25 @@ public class ServidorPrincipal {
             additionalDataOutputStream.writeUTF("Fragmentos distribuidos correctamente. Puedes solicitar nuevamente el archivo si lo deseas.");
             additionalDataOutputStream.flush();
 
+            // Esperar la solicitud del archivo "FragmentosUnidos.txt" del cliente
+            String clientRequest = additionalDataInputStream.readUTF();
+            if (clientRequest.equals("Solicitar archivo")) {
+                // Unir los fragmentos en un solo archivo
+                byte[] mergedFile = mergeFragments(fileFragments);
+
+                // Enviar el archivo "FragmentosUnidos.txt" al cliente
+                sendFileToClient(mergedFile, additionalDataOutputStream);
+            } else {
+                System.out.println("Pasó un error");
+            }
+            System.out.println("Los fragmentos han sido unidos en el archivo FragmentosUnidos.txt");
+
             clientSocket.close();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    
 
     private static byte[][] defragmentFile(byte[] encryptedFile) {
         int numFragments = 3; // Número de fragmentos deseado (en este caso, 3)
@@ -75,7 +84,6 @@ public class ServidorPrincipal {
         return fileFragments;
     }
 
-
     private static void sendFragmentToServer(byte[] fragment, String serverName, int serverPort) throws Exception {
         // Establecer conexión con el servidor secundario
         Socket socket = new Socket(serverName, serverPort);
@@ -90,22 +98,6 @@ public class ServidorPrincipal {
         socket.close();
     }
 
-    private static byte[] getFragmentFromServer(String serverName, int serverPort) throws Exception {
-        // Establecer conexión con el servidor secundario
-        Socket socket = new Socket(serverName, serverPort);
-
-        // Recibir fragmento del servidor secundario
-        InputStream inputStream = socket.getInputStream();
-        DataInputStream dataInputStream = new DataInputStream(inputStream);
-        int fragmentLength = dataInputStream.readInt();
-        byte[] fragment = new byte[fragmentLength];
-        dataInputStream.readFully(fragment, 0, fragmentLength);
-
-        socket.close();
-
-        return fragment;
-    }
-    
     private static byte[] mergeFragments(byte[][] fragments) {
         int totalLength = 0;
         for (byte[] fragment : fragments) {
@@ -121,5 +113,30 @@ public class ServidorPrincipal {
         }
 
         return mergedFile;
+    }
+
+    private static void sendFileToClient(byte[] fileBytes, DataOutputStream dataOutputStream) throws IOException {
+        // Guardar el archivo unido en el disco
+        FileOutputStream fileOutputStream = new FileOutputStream("FragmentosUnidos.txt");
+        fileOutputStream.write(fileBytes);
+        fileOutputStream.close();
+
+        // Obtener el archivo unido del disco
+        File file = new File("FragmentosUnidos.txt");
+        FileInputStream fileInputStream = new FileInputStream(file);
+
+        // Enviar el archivo al cliente
+        dataOutputStream.writeInt((int) file.length());
+        byte[] buffer = new byte[FRAGMENT_SIZE];
+        int bytesRead;
+        while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+            dataOutputStream.write(buffer, 0, bytesRead);
+        }
+        dataOutputStream.flush();
+
+        fileInputStream.close();
+
+        // Eliminar el archivo temporal
+        file.delete();
     }
 }
