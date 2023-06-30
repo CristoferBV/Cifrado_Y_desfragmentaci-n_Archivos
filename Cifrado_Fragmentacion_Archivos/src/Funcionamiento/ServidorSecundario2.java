@@ -4,12 +4,16 @@ import java.io.*;
 import java.net.*;
 
 public class ServidorSecundario2 {
-    private static final int SERVER_PORT = 8300; // Puerto para la conexión con el servidor secundario 2
-    private static final String FRAGMENT_FILE_PATH = "C:/Users/Cristofer/Downloads/UNA/Carreras UNA/Ingeniería en Sistemas/Tercer Año/Sistemas Operativos/Tareas/Tarea 3/Cifrado_Fragmentacion_Archivos/fragmento2.txt"; // Ruta del archivo "fragmento2.txt"
+    private static final int PUERTO_SERVIDOR = 8300; 
+    private static final String RUTA_FRAGMENTO = 
+            "C:/Users/Cristofer/Downloads/UNA/Carreras UNA/"
+            + "Ingeniería en Sistemas/Tercer Año/"
+            + "Sistemas Operativos/Tareas/Tarea 3/"
+            + "Cifrado_Fragmentacion_Archivos/fragmento2.txt"; 
 
     public static void main(String[] args) {
         try {
-            ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
+            ServerSocket serverSocket = new ServerSocket(PUERTO_SERVIDOR);
 
             System.out.println("Servidor secundario 2 esperando conexión...");
 
@@ -19,15 +23,17 @@ public class ServidorSecundario2 {
 
                 // Recibir fragmento del archivo del cliente
                 InputStream inputStream = socket.getInputStream();
-                DataInputStream dataInputStream = new DataInputStream(inputStream);
-                int fragmentLength = dataInputStream.readInt();
-                byte[] fragment = new byte[fragmentLength];
-                dataInputStream.readFully(fragment, 0, fragmentLength);
+                DataInputStream dataInputStream = 
+                        new DataInputStream(inputStream);
+                int longfragmento = dataInputStream.readInt();
+                byte[] fragmento = new byte[longfragmento];
+                dataInputStream.readFully(fragmento, 0, longfragmento);
 
-                // Guardar fragmento en un archivo
-                saveFragmentToFile(fragment, FRAGMENT_FILE_PATH);
+                
+                guardarFragmentoArchivo(fragmento, RUTA_FRAGMENTO);
 
-                System.out.println("Fragmento guardado en: " + FRAGMENT_FILE_PATH);
+                System.out.println("Fragmento guardado en: " 
+                        + RUTA_FRAGMENTO);
 
                 socket.close();
                 //serverSocket.close();
@@ -37,8 +43,10 @@ public class ServidorSecundario2 {
         }
     }
 
-    private static void saveFragmentToFile(byte[] fragment, String filePath) {
-        try (FileOutputStream fileOutputStream = new FileOutputStream(filePath)) {
+    private static void guardarFragmentoArchivo(byte[] fragment, 
+            String filePath) {
+        try (FileOutputStream fileOutputStream = 
+                new FileOutputStream(filePath)) {
             fileOutputStream.write(fragment);
         } catch (IOException e) {
             e.printStackTrace();
